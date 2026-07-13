@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>REHS Security Camera</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">AI Security Camera</p>
+        <h1>Recognition dashboard</h1>
+      </div>
+      <form action="{{ url_for('main.create_demo_detection') }}" method="post">
+        <button type="submit">Log demo detection</button>
+      </form>
+    </header>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <section class="flash">
+          {% for message in messages %}<p>{{ message }}</p>{% endfor %}
+        </section>
+      {% endif %}
+    {% endwith %}
+
+    <main>
+      <section class="stats">
+        <article><span>{{ stats.people }}</span><p>People enrolled</p></article>
+        <article><span>{{ stats.cameras }}</span><p>Cameras registered</p></article>
+        <article><span>{{ stats.detections }}</span><p>Detections logged</p></article>
+      </section>
+
+      <section class="grid">
+        <article class="panel">
+          <h2>Enroll person</h2>
+          <form action="{{ url_for('main.create_person') }}" method="post" enctype="multipart/form-data">
+            <label>Name <input name="name" required></label>
+            <label>Notes <textarea name="notes" rows="3"></textarea></label>
+            <label>Face images <input name="images" type="file" accept="image/*" multiple required></label>
+            <button type="submit">Add person</button>
+          </form>
+        </article>
+
+        <article class="panel">
+          <h2>Add camera</h2>
+          <form action="{{ url_for('main.create_camera') }}" method="post">
+            <label>Name <input name="name" required></label>
+            <label>Stream URL <input name="stream_url" placeholder="rtsp:// or http://" required></label>
+            <label>Location <input name="location"></label>
+            <button type="submit">Register camera</button>
+          </form>
+        </article>
+      </section>
+
+      <section class="grid">
+        <article class="panel">
+          <h2>People</h2>
+          <table>
+            <thead><tr><th>Name</th><th>Images</th><th>Notes</th></tr></thead>
+            <tbody>
+              {% for person in people %}
+                <tr><td>{{ person.name }}</td><td>{{ person.image_count }}</td><td>{{ person.notes }}</td></tr>
+              {% else %}
+                <tr><td colspan="3">No people enrolled yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </article>
+
+        <article class="panel">
+          <h2>Cameras</h2>
+          <table>
+            <thead><tr><th>Name</th><th>Location</th><th>Stream</th></tr></thead>
+            <tbody>
+              {% for camera in cameras %}
+                <tr><td>{{ camera.name }}</td><td>{{ camera.location }}</td><td>{{ camera.stream_url }}</td></tr>
+              {% else %}
+                <tr><td colspan="3">No cameras registered yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2>Detection log</h2>
+        <table>
+          <thead><tr><th>Time</th><th>Person</th><th>Camera</th><th>Confidence</th></tr></thead>
+          <tbody>
+            {% for detection in detections %}
+              <tr>
+                <td>{{ detection.occurred_at }}</td>
+                <td>{{ detection.person_name }}</td>
+                <td>{{ detection.camera_name }}</td>
+                <td>{{ "%.1f"|format(detection.confidence) }}%</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="4">No detections yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>
