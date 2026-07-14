@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask
 
 from .db import close_db, init_db
@@ -10,6 +12,7 @@ def create_app():
         DATABASE="security_camera.sqlite3",
         UPLOAD_FOLDER="instance/uploads",
         MAX_CONTENT_LENGTH=16 * 1024 * 1024,
+        SECRET_KEY=os.environ.get("SECRET_KEY", "dev"),
     )
 
     app.teardown_appcontext(close_db)

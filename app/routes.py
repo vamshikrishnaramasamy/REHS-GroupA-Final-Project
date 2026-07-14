@@ -3,6 +3,7 @@ from pathlib import Path
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 
 from .db import get_db
+from .notifications import send_detection_alert
 from .recognition import save_enrollment_image
 
 bp = Blueprint("main", __name__)
@@ -98,18 +99,25 @@ def create_camera():
 @bp.post("/detections/demo")
 def create_demo_detection():
     db = get_db()
-    db.execute(
+    person_name = request.form.get("person_name", "Unknown")
+    camera_name = request.form.get("camera_name", "Demo Camera")
+    confidence = float(request.form.get("confidence", 82))
+    cursor = db.execute(
         """
         INSERT INTO detections (person_name, camera_name, confidence, snapshot_path)
         VALUES (?, ?, ?, ?)
         """,
-        (
-            request.form.get("person_name", "Unknown"),
-            request.form.get("camera_name", "Demo Camera"),
-            float(request.form.get("confidence", 82)),
-            "",
-        ),
+        (person_name, camera_name, confidence, ""),
     )
     db.commit()
+    row = db.execute(
+        "SELECT occurred_at FROM detections WHERE id = ?", (cursor.lastrowid,)
+    ).fetchone()
+
+    try:
+        send_detection_alert(person_name, camera_name, confidence, row["occurred_at"])
+    except Exception as exc:  # noqa: BLE001 - alerting must never break detection logging
+        current_app.logger.warning("Detection alert email failed: %s", exc)
+
     flash("Demo detection logged.")
     return redirect(url_for("main.dashboard"))
