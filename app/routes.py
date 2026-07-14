@@ -1,6 +1,6 @@
 from pathlib import Path
-
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from werkzeug.utils import secure_filename
 
 from .db import get_db
 from .recognition import save_enrollment_image
@@ -42,7 +42,20 @@ def dashboard():
 def create_person():
     name = request.form.get("name", "").strip()
     notes = request.form.get("notes", "").strip()
-    images = [image for image in request.files.getlist("images") if image.filename]
+    
+    uploaded_files = request.files.getlist("images")
+    images = []
+    
+    for image in uploaded_files:
+        if image.filename:
+            if not current_app.allowed_file(image.filename):
+                flash(f"Error: {image.filename} is an invalid file type. Only PNG, JPG, JPEG allowed.")
+                return redirect(url_for("main.dashboard"))
+            
+            
+            image.filename = secure_filename(image.filename)
+            images.append(image)
+
     if not name:
         flash("Name is required.")
         return redirect(url_for("main.dashboard"))
@@ -54,6 +67,7 @@ def create_person():
     cursor = db.execute("INSERT INTO people (name, notes) VALUES (?, ?)", (name, notes))
     person_id = cursor.lastrowid
     upload_dir = Path(current_app.config["UPLOAD_FOLDER"]) / "people" / str(person_id)
+    
     for image in images:
         path = save_enrollment_image(image, upload_dir)
         db.execute(
@@ -102,3 +116,19 @@ def create_demo_detection():
     db.commit()
     flash("Demo detection logged.")
     return redirect(url_for("main.dashboard"))
+
+
+@bp.post("/cameras/delete/<int:camera_id>")
+def delete_camera(camera_id):
+    db = get_db()
+    camera = db.execute("SELECT name FROM cameras WHERE id = ?", (camera_id,)).fetchone()
+    
+    if camera:
+        db.execute("DELETE FROM cameras WHERE id = ?", (camera_id,))
+        db.commit()
+        flash(f"Deleted camera: {camera['name']}")
+    else:
+        flash("Camera not found.")
+        
+    return redirect(url_for("main.dashboard"))
+
