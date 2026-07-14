@@ -1,0 +1,11 @@
+On the RPI:
+1. Create a new folder called oakstream
+2. cd into that folder 
+3. run "python3 -m venv .venv"
+4. run "source .venv/bin/activate"
+5. run "pip install depthai"
+6. Go to https://github.com/bluenviron/mediamtx/releases, download 1.19.2 Linux ARM64 package and extract, move both files into under one folder
+7. On a terminal, run ./mediamtx 
+8. Create a python script inside oakstream, copy and paste from oakstream.py on this github
+9. On a terminal, run oakstream.py, it will give you a rtsp://localhost link
+10. Run hostname -I to get your RPI IP, replace localhost with your IP so you can open up the stream on other machine

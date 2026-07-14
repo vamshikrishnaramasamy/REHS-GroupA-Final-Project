@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Camera Streams</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+
+  <body>
+
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">AI Security Camera</p>
+        <h1>Live Camera Feed</h1>
+      </div>
+    </header>
+
+    <main>
+
+      <section class="stats">
+        <article>
+          <span>{{ cameras|length }}</span>
+          <p>Total Cameras</p>
+        </article>
+
+        <article>
+          <span>{{ online_count }}</span>
+          <p>Online</p>
+        </article>
+
+        <article>
+          <span>{{ offline_count }}</span>
+          <p>Offline</p>
+        </article>
+      </section>
+
+      <section class="camera-grid">
+
+        {% for camera in cameras %}
+
+        <article class="panel">
+
+          <div class="camera-header">
+
+            <div>
+              <h2>{{ camera.name }}</h2>
+
+              <p class="camera-location">
+                {{ camera.location or "No location provided" }}
+              </p>
+            </div>
+
+            {% if camera.online %}
+              <span class="status online">
+                ● Online
+              </span>
+            {% else %}
+              <span class="status offline">
+                ● Offline
+              </span>
+            {% endif %}
+
+          </div>
+
+          <div class="camera-feed">
+
+            {% if camera.online %}
+
+              <img
+                src="{{ url_for('main.video_feed', camera_id=camera.id) }}"
+                alt="Live stream">
+
+            {% else %}
+
+              <div class="camera-error">
+
+                <h3>No Video</h3>
+
+                <p>
+                  Camera is unavailable.
+                </p>
+
+              </div>
+
+            {% endif %}
+
+          </div>
+
+          <div class="camera-footer">
+
+            <p>
+              <strong>Last Frame:</strong>
+              {{ camera.last_frame or "Never" }}
+            </p>
+
+            <p>
+              <strong>Stream URL:</strong>
+              {{ camera.stream_url }}
+            </p>
+
+          </div>
+
+        </article>
+
+        {% else %}
+
+        <article class="panel">
+
+          <h2>No Cameras Registered</h2>
+
+          <p>
+            Register a camera from the dashboard to begin streaming.
+          </p>
+
+        </article>
+
+        {% endfor %}
+
+      </section>
+
+    </main>
+
+  </body>
+</html>
