@@ -37,6 +37,20 @@ def dashboard():
         people=people,
     )
 
+@bp.route("/cameras")
+def cameras():
+    cameras = db.get_cameras()
+
+    online_count = sum(1 for c in cameras if c["online"])
+    offline_count = len(cameras) - online_count
+
+    return render_template(
+        "cameras.html",
+        cameras=cameras,
+        online_count=online_count,
+        offline_count=offline_count,
+    )
+
 
 @bp.post("/people")
 def create_person():
