@@ -17,7 +17,7 @@ augmentation_pipeline = A.Compose([
     A.VerticalFlip(p=0.5),
     A.Rotate(limit=15, p=0.8),
     A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.8),
-    A.GaussNoise(std_range=(0.02, 0.05), p=0.3),  # Adds noise for robustness
+    A.GaussNoise(std_range=(0.02, 0.05), p=0.3),  # Adds noise
 ])
 
 
