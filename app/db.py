@@ -39,6 +39,14 @@ CREATE TABLE IF NOT EXISTS detections (
     snapshot_path TEXT DEFAULT '',
     occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS augmented_images (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_filename TEXT NOT NULL,
+    output_filename TEXT NOT NULL,
+    output_path TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 

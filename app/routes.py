@@ -1,7 +1,8 @@
+import sqlite3
 import cv2
 from pathlib import Path
 # Added 'jsonify' to the imports
-from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for, Response, jsonify
+from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for, Response, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 
 from .db import get_db
@@ -10,6 +11,31 @@ from .recognition import save_enrollment_image
 from datetime import datetime
 
 bp = Blueprint("main", __name__)
+
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg"}
+
+
+def is_allowed_image(filename):
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+    )
+
+
+def validate_face_images(uploaded_files):
+    """Secure filenames and validate extensions for face-image uploads.
+
+    Returns (images, error_message). On error, images is [].
+    """
+    images = []
+    for image in uploaded_files:
+        if not image.filename:
+            continue
+        if not is_allowed_image(image.filename):
+            return [], f"Error: {image.filename} is an invalid file type. Only PNG, JPG, JPEG allowed."
+        image.filename = secure_filename(image.filename)
+        images.append(image)
+    return images, None
 
 # --- HELPERS FOR STREAMING ---
 
@@ -59,6 +85,7 @@ def dashboard():
         "people": db.execute("SELECT COUNT(*) FROM people").fetchone()[0],
         "cameras": db.execute("SELECT COUNT(*) FROM cameras").fetchone()[0],
         "detections": db.execute("SELECT COUNT(*) FROM detections").fetchone()[0],
+        "augmented_images": db.execute("SELECT COUNT(*) FROM augmented_images").fetchone()[0],
     }
     detections = db.execute(
         "SELECT * FROM detections ORDER BY occurred_at DESC LIMIT 20"
@@ -73,12 +100,21 @@ def dashboard():
         ORDER BY people.name
         """
     ).fetchall()
+    augmented_sources = db.execute(
+        """
+        SELECT source_filename, COUNT(*) AS augmented_count
+        FROM augmented_images
+        GROUP BY source_filename
+        ORDER BY source_filename
+        """
+    ).fetchall()
     return render_template(
         "dashboard.html",
         stats=stats,
         detections=detections,
         cameras=cameras,
         people=people,
+        augmented_sources=augmented_sources,
     )
 
 
@@ -188,19 +224,11 @@ def delete_camera(camera_id):
 def create_person():
     name = request.form.get("name", "").strip()
     notes = request.form.get("notes", "").strip()
-    
-    uploaded_files = request.files.getlist("images")
-    images = []
-    
-    for image in uploaded_files:
-        if image.filename:
-            if not current_app.allowed_file(image.filename):
-                flash(f"Error: {image.filename} is an invalid file type. Only PNG, JPG, JPEG allowed.")
-                return redirect(url_for("main.dashboard"))
-            
-            
-            image.filename = secure_filename(image.filename)
-            images.append(image)
+
+    images, error = validate_face_images(request.files.getlist("images"))
+    if error:
+        flash(error)
+        return redirect(url_for("main.dashboard"))
 
     if not name:
         flash("Name is required.")
@@ -210,19 +238,109 @@ def create_person():
         return redirect(url_for("main.dashboard"))
 
     db = get_db()
-    cursor = db.execute("INSERT INTO people (name, notes) VALUES (?, ?)", (name, notes))
+    existing = db.execute(
+        "SELECT id FROM people WHERE lower(name) = lower(?)", (name,)
+    ).fetchone()
+    if existing:
+        flash(f"A person named '{name}' already exists.")
+        return redirect(url_for("main.dashboard"))
+
+    try:
+        cursor = db.execute("INSERT INTO people (name, notes) VALUES (?, ?)", (name, notes))
+    except sqlite3.IntegrityError:
+        flash(f"A person named '{name}' already exists.")
+        return redirect(url_for("main.dashboard"))
     person_id = cursor.lastrowid
     upload_dir = Path(current_app.config["UPLOAD_FOLDER"]) / "people" / str(person_id)
-    
+
     for image in images:
-        path = save_enrollment_image(image, upload_dir)
+        save_enrollment_image(image, upload_dir)
         db.execute(
             "INSERT INTO face_images (person_id, path) VALUES (?, ?)",
-            (person_id, path),
+            (person_id, f"people/{person_id}/{image.filename}"),
         )
     db.commit()
     flash(f"Added {name}.")
     return redirect(url_for("main.dashboard"))
+
+
+@bp.route("/people/<int:person_id>")
+def person_detail(person_id):
+    db = get_db()
+    person = db.execute("SELECT * FROM people WHERE id = ?", (person_id,)).fetchone()
+    if not person:
+        flash("Person not found.")
+        return redirect(url_for("main.dashboard"))
+
+    images = db.execute(
+        "SELECT * FROM face_images WHERE person_id = ? ORDER BY created_at DESC",
+        (person_id,),
+    ).fetchall()
+    detections = db.execute(
+        "SELECT * FROM detections WHERE person_name = ? ORDER BY occurred_at DESC",
+        (person["name"],),
+    ).fetchall()
+
+    return render_template(
+        "person_detail.html",
+        person=person,
+        images=images,
+        detections=detections,
+    )
+
+
+@bp.post("/people/<int:person_id>/images")
+def add_person_images(person_id):
+    db = get_db()
+    person = db.execute("SELECT * FROM people WHERE id = ?", (person_id,)).fetchone()
+    if not person:
+        flash("Person not found.")
+        return redirect(url_for("main.dashboard"))
+
+    images, error = validate_face_images(request.files.getlist("images"))
+    if error:
+        flash(error)
+        return redirect(url_for("main.person_detail", person_id=person_id))
+    if len(images) < 1:
+        flash("Upload at least one face image.")
+        return redirect(url_for("main.person_detail", person_id=person_id))
+
+    upload_dir = Path(current_app.config["UPLOAD_FOLDER"]) / "people" / str(person_id)
+    for image in images:
+        save_enrollment_image(image, upload_dir)
+        db.execute(
+            "INSERT INTO face_images (person_id, path) VALUES (?, ?)",
+            (person_id, f"people/{person_id}/{image.filename}"),
+        )
+    db.commit()
+    flash(f"Added {len(images)} image(s).")
+    return redirect(url_for("main.person_detail", person_id=person_id))
+
+
+@bp.post("/people/<int:person_id>/images/<int:image_id>/delete")
+def delete_person_image(person_id, image_id):
+    db = get_db()
+    image = db.execute(
+        "SELECT * FROM face_images WHERE id = ? AND person_id = ?",
+        (image_id, person_id),
+    ).fetchone()
+    if not image:
+        flash("Image not found.")
+        return redirect(url_for("main.person_detail", person_id=person_id))
+
+    file_path = Path(current_app.config["UPLOAD_FOLDER"]) / image["path"]
+    file_path.unlink(missing_ok=True)
+
+    db.execute("DELETE FROM face_images WHERE id = ?", (image_id,))
+    db.commit()
+    flash("Image removed.")
+    return redirect(url_for("main.person_detail", person_id=person_id))
+
+
+@bp.route("/uploads/<path:filename>")
+def uploaded_file(filename):
+    upload_root = Path(current_app.config["UPLOAD_FOLDER"]).resolve()
+    return send_from_directory(upload_root, filename)
 
 
 @bp.post("/cameras")

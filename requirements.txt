@@ -1,4 +1,5 @@
 opencv-python>=4.10
+albumentations>=1.4
 anyio==4.12.1
 argon2-cffi==25.1.0
 argon2-cffi-bindings==25.1.0

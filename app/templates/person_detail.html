@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ person.name }} - REHS Security Camera</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="nav-container">
+        <a href="{{ url_for('main.dashboard') }}" class="nav-logo">
+          AI Security Camera
+        </a>
+        <ul class="nav-links">
+          <li>
+            <a href="{{ url_for('main.dashboard') }}" class="nav-item">Dashboard</a>
+          </li>
+          <li>
+            <a href="{{ url_for('main.cameras') }}" class="nav-item">Camera Grid</a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <header class="topbar">
+      <div>
+        <p class="eyebrow"><a href="{{ url_for('main.dashboard') }}">&larr; Dashboard</a></p>
+        <h1>{{ person.name }}</h1>
+      </div>
+    </header>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <section class="flash">
+          {% for message in messages %}<p>{{ message }}</p>{% endfor %}
+        </section>
+      {% endif %}
+    {% endwith %}
+
+    <main>
+      <section class="grid">
+        <article class="panel">
+          <h2>Notes</h2>
+          <p>{{ person.notes or "No notes recorded." }}</p>
+        </article>
+
+        <article class="panel">
+          <h2>Add images</h2>
+          <form action="{{ url_for('main.add_person_images', person_id=person.id) }}" method="post" enctype="multipart/form-data">
+            <label>Face images <input name="images" type="file" accept="image/png,image/jpeg" multiple required></label>
+            <button type="submit">Add images</button>
+          </form>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2>Enrolled images ({{ images|length }})</h2>
+        <div class="image-grid">
+          {% for image in images %}
+            <figure class="image-card">
+              <img src="{{ url_for('main.uploaded_file', filename=image.path) }}" alt="{{ person.name }} face image">
+              <figcaption>
+                <form action="{{ url_for('main.delete_person_image', person_id=person.id, image_id=image.id) }}" method="post" style="margin:0;">
+                  <button type="submit" onclick="return confirm('Remove this image?');" style="color: white; background-color: #dc3545; padding: 4px 8px; font-weight: 400; font-size: 0.8rem;">
+                    Remove
+                  </button>
+                </form>
+              </figcaption>
+            </figure>
+          {% else %}
+            <p>No images enrolled yet.</p>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Detection history</h2>
+        <table>
+          <thead><tr><th>Time</th><th>Camera</th><th>Confidence</th></tr></thead>
+          <tbody>
+            {% for detection in detections %}
+              <tr>
+                <td>{{ detection.occurred_at }}</td>
+                <td>{{ detection.camera_name }}</td>
+                <td>{{ "%.1f"|format(detection.confidence) }}%</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="3">No detections logged for this person yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>

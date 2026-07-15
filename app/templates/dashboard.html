@@ -44,6 +44,7 @@
         <article><span>{{ stats.people }}</span><p>People enrolled</p></article>
         <article><span>{{ stats.cameras }}</span><p>Cameras registered</p></article>
         <article><span>{{ stats.detections }}</span><p>Detections logged</p></article>
+        <article><span>{{ stats.augmented_images }}</span><p>Augmented images generated</p></article>
       </section>
 
       <section class="grid">
@@ -75,7 +76,11 @@
             <thead><tr><th>Name</th><th>Images</th><th>Notes</th></tr></thead>
             <tbody>
               {% for person in people %}
-                <tr><td>{{ person.name }}</td><td>{{ person.image_count }}</td><td>{{ person.notes }}</td></tr>
+                <tr>
+                  <td><a href="{{ url_for('main.person_detail', person_id=person.id) }}">{{ person.name }}</a></td>
+                  <td>{{ person.image_count }}</td>
+                  <td>{{ person.notes }}</td>
+                </tr>
               {% else %}
                 <tr><td colspan="3">No people enrolled yet.</td></tr>
               {% endfor %}
@@ -114,6 +119,23 @@
             </tbody>
           </table>
         </article>
+
+      <section class="panel">
+        <h2>Augmented images</h2>
+        <table>
+          <thead><tr><th>Source image</th><th>Augmented count</th></tr></thead>
+          <tbody>
+            {% for source in augmented_sources %}
+              <tr>
+                <td>{{ source.source_filename }}</td>
+                <td>{{ source.augmented_count }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="2">No augmented images generated yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
 
       <section class="panel">
         <h2>Detection log</h2>
