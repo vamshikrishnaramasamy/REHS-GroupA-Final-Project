@@ -6,6 +6,8 @@ from pathlib import Path
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for, Response, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 
+from augmentation_utils import generate_variants
+
 from .db import get_db
 from .notifications import send_detection_alert
 from .recognition import save_enrollment_image
@@ -315,6 +317,57 @@ def add_person_images(person_id):
         )
     db.commit()
     flash(f"Added {len(images)} image(s).")
+    return redirect(url_for("main.person_detail", person_id=person_id))
+
+
+@bp.post("/people/<int:person_id>/augment")
+def augment_person_images(person_id):
+    db = get_db()
+    person = db.execute("SELECT * FROM people WHERE id = ?", (person_id,)).fetchone()
+    if not person:
+        flash("Person not found.")
+        return redirect(url_for("main.dashboard"))
+
+    source_images = db.execute(
+        "SELECT * FROM face_images WHERE person_id = ? AND is_augmented = 0",
+        (person_id,),
+    ).fetchall()
+    if not source_images:
+        flash("No source images available to augment.")
+        return redirect(url_for("main.person_detail", person_id=person_id))
+
+    upload_root = Path(current_app.config["UPLOAD_FOLDER"])
+    upload_dir = upload_root / "people" / str(person_id)
+    generated_count = 0
+
+    for source in source_images:
+        source_name = Path(source["path"]).name
+        image = cv2.imread(str(upload_root / source["path"]))
+        if image is None:
+            continue
+
+        base_name = Path(source_name).stem
+        ext = Path(source_name).suffix
+        for i, augmented_image in enumerate(generate_variants(image)):
+            output_filename = f"{base_name}_aug_{i}{ext}"
+            output_path = upload_dir / output_filename
+            cv2.imwrite(str(output_path), augmented_image)
+
+            db.execute(
+                "INSERT INTO face_images (person_id, path, is_augmented) VALUES (?, ?, 1)",
+                (person_id, f"people/{person_id}/{output_filename}"),
+            )
+            db.execute(
+                """
+                INSERT INTO augmented_images (source_filename, output_filename, output_path)
+                VALUES (?, ?, ?)
+                """,
+                (source_name, output_filename, str(output_path)),
+            )
+            generated_count += 1
+
+    db.commit()
+    flash(f"Generated {generated_count} augmented image(s) from {len(source_images)} source image(s).")
     return redirect(url_for("main.person_detail", person_id=person_id))
 
 

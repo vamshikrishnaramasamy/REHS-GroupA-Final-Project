@@ -3,22 +3,13 @@ import sqlite3
 from pathlib import Path
 
 import cv2
-import albumentations as A
+
+from augmentation_utils import generate_variants
 
 REPO_ROOT = Path(__file__).resolve().parent
 INPUT_DIR = REPO_ROOT / "untamperedImages"
 OUTPUT_DIR = REPO_ROOT / "augmentedImages"
 DB_PATH = REPO_ROOT / "instance" / "security_camera.sqlite3"
-NUM_AUGMENTATIONS = 6
-
-
-augmentation_pipeline = A.Compose([
-    A.HorizontalFlip(p=0.5),
-    A.VerticalFlip(p=0.5),
-    A.Rotate(limit=15, p=0.8),
-    A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.8),
-    A.GaussNoise(std_range=(0.02, 0.05), p=0.3),  # Adds noise
-])
 
 
 def get_connection() -> sqlite3.Connection:
@@ -57,10 +48,7 @@ def main() -> None:
 
         base_name, ext = os.path.splitext(filename)
 
-        for i in range(NUM_AUGMENTATIONS):
-            augmented = augmentation_pipeline(image=image)
-            augmented_image = augmented["image"]
-
+        for i, augmented_image in enumerate(generate_variants(image)):
             output_filename = f"{base_name}_aug_{i}{ext}"
             output_path = OUTPUT_DIR / output_filename
             cv2.imwrite(str(output_path), augmented_image)

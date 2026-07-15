@@ -325,3 +325,12 @@ th {
   padding: 6px;
   text-align: center;
 }
+
+.image-badge {
+  margin: 0 0 6px;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

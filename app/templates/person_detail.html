@@ -56,6 +56,9 @@
             <label>Face images <input name="images" type="file" accept="image/png,image/jpeg" multiple required></label>
             <button type="submit">Add images</button>
           </form>
+          <form action="{{ url_for('main.augment_person_images', person_id=person.id) }}" method="post">
+            <button type="submit">Augment source images</button>
+          </form>
         </article>
       </section>
 
@@ -66,6 +69,7 @@
             <figure class="image-card">
               <img src="{{ url_for('main.uploaded_file', filename=image.path) }}" alt="{{ person.name }} face image">
               <figcaption>
+                {% if image.is_augmented %}<p class="image-badge">Augmented</p>{% endif %}
                 <form action="{{ url_for('main.delete_person_image', person_id=person.id, image_id=image.id) }}" method="post" style="margin:0;">
                   <button type="submit" onclick="return confirm('Remove this image?');" style="color: white; background-color: #dc3545; padding: 4px 8px; font-weight: 400; font-size: 0.8rem;">
                     Remove
