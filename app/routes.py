@@ -4,6 +4,7 @@ from pathlib import Path
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for, Response, jsonify
 from werkzeug.utils import secure_filename
 
+from .clips import capture_detection_clip
 from .db import get_db
 from .notifications import send_detection_alert
 from .recognition import save_enrollment_image
@@ -258,14 +259,30 @@ def create_demo_detection():
         (person_name, camera_name, confidence, ""),
     )
     db.commit()
+    detection_id = cursor.lastrowid
     row = db.execute(
-        "SELECT occurred_at FROM detections WHERE id = ?", (cursor.lastrowid,)
+        "SELECT occurred_at FROM detections WHERE id = ?", (detection_id,)
     ).fetchone()
 
     try:
         send_detection_alert(person_name, camera_name, confidence, row["occurred_at"])
     except Exception as exc:  # noqa: BLE001 - alerting must never break detection logging
         current_app.logger.warning("Detection alert email failed: %s", exc)
+
+    try:
+        camera_row = db.execute(
+            "SELECT stream_url FROM cameras WHERE name = ?", (camera_name,)
+        ).fetchone()
+        if camera_row and camera_row["stream_url"]:
+            clip_path = capture_detection_clip(camera_row["stream_url"], detection_id)
+            if clip_path:
+                db.execute(
+                    "UPDATE detections SET clip_path = ? WHERE id = ?",
+                    (clip_path, detection_id),
+                )
+                db.commit()
+    except Exception as exc:  # noqa: BLE001 - clip capture must never break detection logging
+        current_app.logger.warning("Detection clip capture failed: %s", exc)
 
     flash("Demo detection logged.")
     return redirect(url_for("main.dashboard"))

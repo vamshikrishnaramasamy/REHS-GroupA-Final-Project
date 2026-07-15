@@ -118,7 +118,7 @@
       <section class="panel">
         <h2>Detection log</h2>
         <table>
-          <thead><tr><th>Time</th><th>Person</th><th>Camera</th><th>Confidence</th></tr></thead>
+          <thead><tr><th>Time</th><th>Person</th><th>Camera</th><th>Confidence</th><th>Clip</th></tr></thead>
           <tbody>
             {% for detection in detections %}
               <tr>
@@ -126,9 +126,16 @@
                 <td>{{ detection.person_name }}</td>
                 <td>{{ detection.camera_name }}</td>
                 <td>{{ "%.1f"|format(detection.confidence) }}%</td>
+                <td>
+                  {% if detection.clip_path %}
+                    <a href="{{ url_for('static', filename=detection.clip_path) }}" target="_blank">View clip</a>
+                  {% else %}
+                    &mdash;
+                  {% endif %}
+                </td>
               </tr>
             {% else %}
-              <tr><td colspan="4">No detections yet.</td></tr>
+              <tr><td colspan="5">No detections yet.</td></tr>
             {% endfor %}
           </tbody>
         </table>

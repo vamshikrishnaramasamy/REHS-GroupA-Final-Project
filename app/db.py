@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS detections (
     camera_name TEXT NOT NULL,
     confidence REAL NOT NULL,
     snapshot_path TEXT DEFAULT '',
+    clip_path TEXT DEFAULT '',
     occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 """
@@ -58,5 +59,17 @@ def close_db(_error=None):
         db.close()
 
 
+def _ensure_column(db, table, column, coltype):
+    existing = {row["name"] for row in db.execute(f"PRAGMA table_info({table})")}
+    if column not in existing:
+        db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
+
+
 def init_db():
-    get_db().executescript(SCHEMA)
+    db = get_db()
+    db.executescript(SCHEMA)
+    # CREATE TABLE IF NOT EXISTS doesn't retrofit columns onto a db file that
+    # predates a schema change, so patch older databases up explicitly.
+    _ensure_column(db, "detections", "clip_path", "TEXT DEFAULT ''")
+    _ensure_column(db, "cameras", "last_frame", "TEXT")
+    db.commit()
