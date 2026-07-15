@@ -31,7 +31,7 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 32px 0 20px;
+  padding: 16px 0 20px;
 }
 
 .eyebrow {
@@ -248,4 +248,54 @@ th {
 
 .camera-footer p {
   margin-bottom: 6px;
+}
+
+.navbar {
+  background-color: #1a1a24;
+  border-bottom: 1px solid #2d2d3d;
+  padding: 0.8rem 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-logo {
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-item {
+  color: #a0a0b0;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
+  padding: 0.5rem 0.8rem;
+  border-radius: 4px;
+}
+
+.nav-item:hover {
+  color: #ffffff;
+  background-color: #2d2d3d;
 }

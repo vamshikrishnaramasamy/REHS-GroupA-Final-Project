@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS cameras (
     stream_url TEXT NOT NULL,
     location TEXT DEFAULT '',
     is_active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_frame TEXT
 );
 
 CREATE TABLE IF NOT EXISTS detections (

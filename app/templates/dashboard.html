@@ -7,9 +7,23 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   </head>
   <body>
+    <nav class="navbar">
+  <div class="nav-container">
+    <a href="{{ url_for('main.dashboard') }}" class="nav-logo">
+      AI Security Camera
+    </a>
+    <ul class="nav-links">
+      <li>
+        <a href="{{ url_for('main.dashboard') }}" class="nav-item">Dashboard</a>
+      </li>
+      <li>
+        <a href="{{ url_for('main.cameras') }}" class="nav-item">Camera Grid</a>
+      </li>
+    </ul>
+  </div>
+</nav>
     <header class="topbar">
       <div>
-        <p class="eyebrow">AI Security Camera</p>
         <h1>Recognition dashboard</h1>
       </div>
       <form action="{{ url_for('main.create_demo_detection') }}" method="post">
