@@ -21,6 +21,16 @@ CREATE TABLE IF NOT EXISTS face_images (
     FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS embeddings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    person_id INTEGER NOT NULL,
+    model_name TEXT NOT NULL,
+    detector_backend TEXT NOT NULL,
+    embedding_path TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS cameras (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -46,7 +56,7 @@ def get_db():
     if "db" not in g:
         db_path = Path(current_app.instance_path) / current_app.config["DATABASE"]
         db_path.parent.mkdir(parents=True, exist_ok=True)
-        g.db = sqlite3.connect(db_path)
+        g.db = sqlite3.connect(db_path, timeout=10)
         g.db.row_factory = sqlite3.Row
         g.db.execute("PRAGMA foreign_keys = ON")
     return g.db
@@ -60,3 +70,19 @@ def close_db(_error=None):
 
 def init_db():
     get_db().executescript(SCHEMA)
+
+def insert_embedding(db, person_id, model_name, detector_backend, embedding_path):
+    db.execute(
+        "INSERT INTO embeddings (person_id, model_name, detector_backend, embedding_path) "
+        "VALUES (?, ?, ?, ?)",
+        (person_id, model_name, detector_backend, embedding_path),
+    )
+    db.commit()
+
+
+def clear_embeddings(db, person_id=None):
+    if person_id is None:
+        db.execute("DELETE FROM embeddings")
+    else:
+        db.execute("DELETE FROM embeddings WHERE person_id = ?", (person_id,))
+    db.commit()
