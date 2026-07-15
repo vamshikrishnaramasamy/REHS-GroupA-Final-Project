@@ -73,16 +73,23 @@
         <article class="panel">
           <h2>People</h2>
           <table>
-            <thead><tr><th>Name</th><th>Images</th><th>Notes</th></tr></thead>
+            <thead><tr><th>Name</th><th>Images</th><th>Notes</th><th>Actions</th></tr></thead>
             <tbody>
               {% for person in people %}
                 <tr>
                   <td><a href="{{ url_for('main.person_detail', person_id=person.id) }}">{{ person.name }}</a></td>
                   <td>{{ person.image_count }}</td>
                   <td>{{ person.notes }}</td>
+                  <td>
+                    <form action="{{ url_for('main.delete_person', person_id=person.id) }}" method="post" style="margin:0; display:inline;">
+                      <button type="submit" onclick="return confirm('Remove {{ person.name }} and all their enrolled images?');" style="color: white; background-color: #dc3545; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                        Delete
+                      </button>
+                    </form>
+                  </td>
                 </tr>
               {% else %}
-                <tr><td colspan="3">No people enrolled yet.</td></tr>
+                <tr><td colspan="4">No people enrolled yet.</td></tr>
               {% endfor %}
             </tbody>
           </table>

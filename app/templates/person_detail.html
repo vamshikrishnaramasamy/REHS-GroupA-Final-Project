@@ -28,6 +28,11 @@
         <p class="eyebrow"><a href="{{ url_for('main.dashboard') }}">&larr; Dashboard</a></p>
         <h1>{{ person.name }}</h1>
       </div>
+      <form action="{{ url_for('main.delete_person', person_id=person.id) }}" method="post">
+        <button type="submit" onclick="return confirm('Remove {{ person.name }} and all their enrolled images?');" style="color: white; background-color: #dc3545;">
+          Delete person
+        </button>
+      </form>
     </header>
 
     {% with messages = get_flashed_messages() %}

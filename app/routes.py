@@ -1,3 +1,4 @@
+import shutil
 import sqlite3
 import cv2
 from pathlib import Path
@@ -335,6 +336,24 @@ def delete_person_image(person_id, image_id):
     db.commit()
     flash("Image removed.")
     return redirect(url_for("main.person_detail", person_id=person_id))
+
+
+@bp.post("/people/<int:person_id>/delete")
+def delete_person(person_id):
+    db = get_db()
+    person = db.execute("SELECT * FROM people WHERE id = ?", (person_id,)).fetchone()
+    if not person:
+        flash("Person not found.")
+        return redirect(url_for("main.dashboard"))
+
+    # face_images rows cascade-delete via the FK; only the on-disk files need cleanup.
+    upload_dir = Path(current_app.config["UPLOAD_FOLDER"]) / "people" / str(person_id)
+    shutil.rmtree(upload_dir, ignore_errors=True)
+
+    db.execute("DELETE FROM people WHERE id = ?", (person_id,))
+    db.commit()
+    flash(f"Removed {person['name']}.")
+    return redirect(url_for("main.dashboard"))
 
 
 @bp.route("/uploads/<path:filename>")
