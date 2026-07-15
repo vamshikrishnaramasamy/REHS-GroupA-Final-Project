@@ -83,20 +83,37 @@
           </table>
         </article>
 
-        <article class="panel">
+       <article class="panel">
           <h2>Cameras</h2>
           <table>
-            <thead><tr><th>Name</th><th>Location</th><th>Stream</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Location</th>
+                <th>Stream</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
             <tbody>
               {% for camera in cameras %}
-                <tr><td>{{ camera.name }}</td><td>{{ camera.location }}</td><td>{{ camera.stream_url }}</td></tr>
+                <tr>
+                  <td>{{ camera.name }}</td>
+                  <td>{{ camera.location }}</td>
+                  <td>{{ camera.stream_url }}</td>
+                  <td>
+                    <form action="{{ url_for('main.delete_camera', camera_id=camera.id) }}" method="post" style="margin:0; display:inline;">
+                      <button type="submit" onclick="return confirm('Are you sure you want to delete this camera?');" style="color: white; background-color: #dc3545; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                        Delete
+                      </button>
+                    </form>
+                  </td>
+                </tr>
               {% else %}
-                <tr><td colspan="3">No cameras registered yet.</td></tr>
+                <tr><td colspan="4">No cameras registered yet.</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </article>
-      </section>
 
       <section class="panel">
         <h2>Detection log</h2>
