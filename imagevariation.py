@@ -33,7 +33,7 @@ def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     conn = get_connection()
 
-    supported_extensions = (".jpg", ".jpeg", ".png")
+    supported_extensions = (".jpg", ".jpeg", ".png", ".webp")
     generated_count = 0
 
     for filename in sorted(os.listdir(INPUT_DIR)):

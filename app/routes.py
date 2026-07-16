@@ -18,7 +18,7 @@ from datetime import datetime
 
 bp = Blueprint("main", __name__)
 
-ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg"}
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
 DEFAULT_ANDROID_WEBCAM_PORT = 8080
 
 
@@ -39,7 +39,7 @@ def validate_face_images(uploaded_files):
         if not image.filename:
             continue
         if not is_allowed_image(image.filename):
-            return [], f"Error: {image.filename} is an invalid file type. Only PNG, JPG, JPEG allowed."
+            return [], f"Error: {image.filename} is an invalid file type. Only PNG, JPG, JPEG, WEBP allowed."
         image.filename = secure_filename(image.filename)
         images.append(image)
     return images, None

@@ -53,7 +53,7 @@
         <article class="panel">
           <h2>Add images</h2>
           <form action="{{ url_for('main.add_person_images', person_id=person.id) }}" method="post" enctype="multipart/form-data">
-            <label>Face images <input name="images" type="file" accept="image/png,image/jpeg" multiple required></label>
+            <label>Face images <input name="images" type="file" accept="image/png,image/jpeg,image/webp" multiple required></label>
             <button type="submit">Add images</button>
           </form>
           <form action="{{ url_for('main.augment_person_images', person_id=person.id) }}" method="post">
