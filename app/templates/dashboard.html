@@ -63,10 +63,20 @@
           <form action="{{ url_for('main.create_camera') }}" method="post" id="camera-form">
             <label>Name <input name="name" required></label>
 
-            <label style="display:flex; flex-direction:row; align-items:center; gap:8px;">
-              <input type="checkbox" id="android-toggle" style="width:auto;">
-              Use Android Webcam
-            </label>
+            <div style="display:flex; flex-direction:row; gap:16px; color: var(--muted); font-size: 0.9rem;">
+              <label style="display:flex; flex-direction:row; align-items:center; gap:6px;">
+                <input type="radio" name="source_choice" value="manual" id="source-manual" style="width:auto;" checked>
+                Manual
+              </label>
+              <label style="display:flex; flex-direction:row; align-items:center; gap:6px;">
+                <input type="radio" name="source_choice" value="android_wifi" id="source-android" style="width:auto;">
+                Use Android Webcam
+              </label>
+              <label style="display:flex; flex-direction:row; align-items:center; gap:6px;">
+                <input type="radio" name="source_choice" value="iphone_wifi" id="source-iphone" style="width:auto;">
+                Use iPhone Webcam
+              </label>
+            </div>
 
             <div id="manual-fields">
               <label>Stream URL <input name="stream_url" id="stream_url" placeholder="rtsp:// or http://" required></label>
@@ -80,27 +90,44 @@
               </p>
             </div>
 
+            <div id="iphone-fields" style="display:none;">
+              <p style="color: var(--muted); font-size: 0.85rem; margin: 0;">
+                iPhone webcam support is coming soon.
+              </p>
+            </div>
+
             <input type="hidden" name="source_type" id="source_type" value="manual">
             <label>Location <input name="location"></label>
-            <button type="submit">Register camera</button>
+            <button type="submit" id="camera-submit">Register camera</button>
           </form>
           <script>
             (function () {
-              const toggle = document.getElementById("android-toggle");
+              const manualRadio = document.getElementById("source-manual");
+              const androidRadio = document.getElementById("source-android");
+              const iphoneRadio = document.getElementById("source-iphone");
               const manualFields = document.getElementById("manual-fields");
               const androidFields = document.getElementById("android-fields");
+              const iphoneFields = document.getElementById("iphone-fields");
               const sourceType = document.getElementById("source_type");
               const streamUrl = document.getElementById("stream_url");
               const androidIp = document.getElementById("android_ip");
+              const submitButton = document.getElementById("camera-submit");
 
-              toggle.addEventListener("change", () => {
-                const useAndroid = toggle.checked;
-                manualFields.style.display = useAndroid ? "none" : "block";
-                androidFields.style.display = useAndroid ? "block" : "none";
-                sourceType.value = useAndroid ? "android_wifi" : "manual";
-                streamUrl.required = !useAndroid;
-                androidIp.required = useAndroid;
+              function update() {
+                const choice = document.querySelector('input[name="source_choice"]:checked').value;
+                manualFields.style.display = choice === "manual" ? "block" : "none";
+                androidFields.style.display = choice === "android_wifi" ? "block" : "none";
+                iphoneFields.style.display = choice === "iphone_wifi" ? "block" : "none";
+                sourceType.value = choice;
+                streamUrl.required = choice === "manual";
+                androidIp.required = choice === "android_wifi";
+                submitButton.disabled = choice === "iphone_wifi";
+              }
+
+              [manualRadio, androidRadio, iphoneRadio].forEach((radio) => {
+                radio.addEventListener("change", update);
               });
+              update();
             })();
           </script>
         </article>

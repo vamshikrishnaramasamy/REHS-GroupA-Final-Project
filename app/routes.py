@@ -428,6 +428,13 @@ def create_camera():
         flash("Camera name is required.")
         return redirect(url_for("main.dashboard"))
 
+    if source_type == "iphone_wifi":
+        # TODO(teammate): wire up iPhone webcam support (e.g. an RTSP/HTTP
+        # stream from an app like "NDI HX Camera" or "EpocCam") the same way
+        # android_wifi below builds a stream_url from user input.
+        flash("iPhone webcam support isn't wired up yet.")
+        return redirect(url_for("main.dashboard"))
+
     if source_type == "android_wifi":
         ip_address = request.form.get("android_ip", "").strip()
         port = request.form.get("android_port", "").strip() or str(DEFAULT_ANDROID_WEBCAM_PORT)
