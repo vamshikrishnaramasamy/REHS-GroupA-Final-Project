@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS cameras (
     location TEXT DEFAULT '',
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_frame TEXT
+    last_frame TEXT,
+    source_type TEXT NOT NULL DEFAULT 'manual'
 );
 
 CREATE TABLE IF NOT EXISTS detections (
@@ -80,4 +81,5 @@ def init_db():
     # predates a schema change, so patch older databases up explicitly.
     _ensure_column(db, "detections", "clip_path", "TEXT DEFAULT ''")
     _ensure_column(db, "cameras", "last_frame", "TEXT")
+    _ensure_column(db, "cameras", "source_type", "TEXT NOT NULL DEFAULT 'manual'")
     db.commit()

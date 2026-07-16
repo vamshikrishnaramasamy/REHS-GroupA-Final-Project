@@ -7,3 +7,4 @@ instance/
 /venv
 /augmentedImages
 app/static/clips/
+.vscode

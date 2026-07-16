@@ -60,12 +60,49 @@
 
         <article class="panel">
           <h2>Add camera</h2>
-          <form action="{{ url_for('main.create_camera') }}" method="post">
+          <form action="{{ url_for('main.create_camera') }}" method="post" id="camera-form">
             <label>Name <input name="name" required></label>
-            <label>Stream URL <input name="stream_url" placeholder="rtsp:// or http://" required></label>
+
+            <label style="display:flex; flex-direction:row; align-items:center; gap:8px;">
+              <input type="checkbox" id="android-toggle" style="width:auto;">
+              Use Android Webcam
+            </label>
+
+            <div id="manual-fields">
+              <label>Stream URL <input name="stream_url" id="stream_url" placeholder="rtsp:// or http://" required></label>
+            </div>
+
+            <div id="android-fields" style="display:none;">
+              <label>Phone IP address <input name="android_ip" id="android_ip" placeholder="e.g. 192.168.1.42"></label>
+              <label>Port <input name="android_port" id="android_port" placeholder="8080" value="8080"></label>
+              <p style="color: var(--muted); font-size: 0.85rem; margin: 0;">
+                Install the "IP Webcam" app on the phone, start the server, and make sure the phone is on the same WiFi network as this device.
+              </p>
+            </div>
+
+            <input type="hidden" name="source_type" id="source_type" value="manual">
             <label>Location <input name="location"></label>
             <button type="submit">Register camera</button>
           </form>
+          <script>
+            (function () {
+              const toggle = document.getElementById("android-toggle");
+              const manualFields = document.getElementById("manual-fields");
+              const androidFields = document.getElementById("android-fields");
+              const sourceType = document.getElementById("source_type");
+              const streamUrl = document.getElementById("stream_url");
+              const androidIp = document.getElementById("android_ip");
+
+              toggle.addEventListener("change", () => {
+                const useAndroid = toggle.checked;
+                manualFields.style.display = useAndroid ? "none" : "block";
+                androidFields.style.display = useAndroid ? "block" : "none";
+                sourceType.value = useAndroid ? "android_wifi" : "manual";
+                streamUrl.required = !useAndroid;
+                androidIp.required = useAndroid;
+              });
+            })();
+          </script>
         </article>
       </section>
 
@@ -103,6 +140,7 @@
                 <th>Name</th>
                 <th>Location</th>
                 <th>Stream</th>
+                <th>Source</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -112,6 +150,7 @@
                   <td>{{ camera.name }}</td>
                   <td>{{ camera.location }}</td>
                   <td>{{ camera.stream_url }}</td>
+                  <td>{{ "Android (WiFi)" if camera.source_type == "android_wifi" else "Manual" }}</td>
                   <td>
                     <form action="{{ url_for('main.delete_camera', camera_id=camera.id) }}" method="post" style="margin:0; display:inline;">
                       <button type="submit" onclick="return confirm('Are you sure you want to delete this camera?');" style="color: white; background-color: #dc3545; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
@@ -121,7 +160,7 @@
                   </td>
                 </tr>
               {% else %}
-                <tr><td colspan="4">No cameras registered yet.</td></tr>
+                <tr><td colspan="5">No cameras registered yet.</td></tr>
               {% endfor %}
             </tbody>
           </table>

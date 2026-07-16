@@ -1,3 +1,4 @@
+import ipaddress
 import shutil
 import sqlite3
 import cv2
@@ -17,6 +18,7 @@ from datetime import datetime
 bp = Blueprint("main", __name__)
 
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg"}
+DEFAULT_ANDROID_WEBCAM_PORT = 8080
 
 
 def is_allowed_image(filename):
@@ -419,16 +421,41 @@ def uploaded_file(filename):
 @bp.post("/cameras")
 def create_camera():
     name = request.form.get("name", "").strip()
-    stream_url = request.form.get("stream_url", "").strip()
     location = request.form.get("location", "").strip()
-    if not name or not stream_url:
-        flash("Camera name and stream URL are required.")
+    source_type = request.form.get("source_type", "manual").strip()
+
+    if not name:
+        flash("Camera name is required.")
         return redirect(url_for("main.dashboard"))
+
+    if source_type == "android_wifi":
+        ip_address = request.form.get("android_ip", "").strip()
+        port = request.form.get("android_port", "").strip() or str(DEFAULT_ANDROID_WEBCAM_PORT)
+
+        if not ip_address:
+            flash("The phone's IP address is required for an Android webcam.")
+            return redirect(url_for("main.dashboard"))
+        try:
+            ipaddress.ip_address(ip_address)
+        except ValueError:
+            flash(f"'{ip_address}' is not a valid IP address.")
+            return redirect(url_for("main.dashboard"))
+        if not port.isdigit():
+            flash("Port must be a number.")
+            return redirect(url_for("main.dashboard"))
+
+        stream_url = f"http://{ip_address}:{port}/video"
+    else:
+        source_type = "manual"
+        stream_url = request.form.get("stream_url", "").strip()
+        if not stream_url:
+            flash("Stream URL is required.")
+            return redirect(url_for("main.dashboard"))
 
     db = get_db()
     db.execute(
-        "INSERT INTO cameras (name, stream_url, location) VALUES (?, ?, ?)",
-        (name, stream_url, location),
+        "INSERT INTO cameras (name, stream_url, location, source_type) VALUES (?, ?, ?, ?)",
+        (name, stream_url, location, source_type),
     )
     db.commit()
     flash(f"Added camera {name}.")
