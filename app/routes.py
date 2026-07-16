@@ -362,10 +362,10 @@ def augment_person_images(person_id):
             )
             db.execute(
                 """
-                INSERT INTO augmented_images (source_filename, output_filename, output_path)
-                VALUES (?, ?, ?)
+                INSERT INTO augmented_images (person_id, source_filename, output_filename, output_path)
+                VALUES (?, ?, ?, ?)
                 """,
-                (source_name, output_filename, str(output_path)),
+                (person_id, source_name, output_filename, str(output_path)),
             )
             generated_count += 1
 
@@ -389,6 +389,11 @@ def delete_person_image(person_id, image_id):
     file_path.unlink(missing_ok=True)
 
     db.execute("DELETE FROM face_images WHERE id = ?", (image_id,))
+    if image["is_augmented"]:
+        db.execute(
+            "DELETE FROM augmented_images WHERE person_id = ? AND output_filename = ?",
+            (person_id, Path(image["path"]).name),
+        )
     db.commit()
     flash("Image removed.")
     return redirect(url_for("main.person_detail", person_id=person_id))

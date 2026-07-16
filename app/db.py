@@ -44,10 +44,12 @@ CREATE TABLE IF NOT EXISTS detections (
 
 CREATE TABLE IF NOT EXISTS augmented_images (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    person_id INTEGER,
     source_filename TEXT NOT NULL,
     output_filename TEXT NOT NULL,
     output_path TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
 );
 """
 
@@ -82,4 +84,5 @@ def init_db():
     _ensure_column(db, "detections", "clip_path", "TEXT DEFAULT ''")
     _ensure_column(db, "cameras", "last_frame", "TEXT")
     _ensure_column(db, "cameras", "source_type", "TEXT NOT NULL DEFAULT 'manual'")
+    _ensure_column(db, "augmented_images", "person_id", "INTEGER REFERENCES people(id) ON DELETE CASCADE")
     db.commit()
