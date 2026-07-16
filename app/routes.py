@@ -1,4 +1,5 @@
 import ipaddress
+import re
 import shutil
 import sqlite3
 import cv2
@@ -42,6 +43,11 @@ def validate_face_images(uploaded_files):
         image.filename = secure_filename(image.filename)
         images.append(image)
     return images, None
+
+
+def slugify_username(name):
+    """Turn a person's name into the bare alphanumeric stem used in filenames."""
+    return re.sub(r"[^a-zA-Z0-9]", "", name).lower() or "person"
 
 # --- HELPERS FOR STREAMING ---
 
@@ -257,9 +263,12 @@ def create_person():
         flash(f"A person named '{name}' already exists.")
         return redirect(url_for("main.dashboard"))
     person_id = cursor.lastrowid
+    username = slugify_username(name)
     upload_dir = Path(current_app.config["UPLOAD_FOLDER"]) / "people" / str(person_id)
 
-    for image in images:
+    for idx, image in enumerate(images, start=1):
+        ext = Path(image.filename).suffix.lower()
+        image.filename = f"{username}{idx}{ext}"
         save_enrollment_image(image, upload_dir)
         db.execute(
             "INSERT INTO face_images (person_id, path) VALUES (?, ?)",
@@ -311,8 +320,17 @@ def add_person_images(person_id):
         flash("Upload at least one face image.")
         return redirect(url_for("main.person_detail", person_id=person_id))
 
+    username = slugify_username(person["name"])
+    existing_count = db.execute(
+        "SELECT COUNT(*) FROM face_images WHERE person_id = ? AND is_augmented = 0",
+        (person_id,),
+    ).fetchone()[0]
+
     upload_dir = Path(current_app.config["UPLOAD_FOLDER"]) / "people" / str(person_id)
-    for image in images:
+    for offset, image in enumerate(images, start=1):
+        idx = existing_count + offset
+        ext = Path(image.filename).suffix.lower()
+        image.filename = f"{username}{idx}{ext}"
         save_enrollment_image(image, upload_dir)
         db.execute(
             "INSERT INTO face_images (person_id, path) VALUES (?, ?)",
@@ -339,6 +357,7 @@ def augment_person_images(person_id):
         flash("No source images available to augment.")
         return redirect(url_for("main.person_detail", person_id=person_id))
 
+    username = slugify_username(person["name"])
     upload_root = Path(current_app.config["UPLOAD_FOLDER"])
     upload_dir = upload_root / "people" / str(person_id)
     generated_count = 0
@@ -349,10 +368,12 @@ def augment_person_images(person_id):
         if image is None:
             continue
 
-        base_name = Path(source_name).stem
+        stem = Path(source_name).stem
         ext = Path(source_name).suffix
-        for i, augmented_image in enumerate(generate_variants(image)):
-            output_filename = f"{base_name}_aug_{i}{ext}"
+        match = re.match(rf"^{re.escape(username)}(\d+)$", stem)
+        source_index = match.group(1) if match else stem
+        for i, augmented_image in enumerate(generate_variants(image), start=1):
+            output_filename = f"{username}{source_index}_{i}{ext}"
             output_path = upload_dir / output_filename
             cv2.imwrite(str(output_path), augmented_image)
 
