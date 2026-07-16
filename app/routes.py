@@ -10,7 +10,7 @@ from werkzeug.utils import secure_filename
 
 from augmentation_utils import generate_variants
 
-from .clips import capture_detection_clip
+from .clips import CLIPS_DIR, capture_detection_clip
 from .db import get_db
 from .notifications import send_detection_alert
 from .recognition import save_enrollment_image
@@ -420,6 +420,17 @@ def delete_person_image(person_id, image_id):
     return redirect(url_for("main.person_detail", person_id=person_id))
 
 
+def _delete_person_record(db, person_id):
+    """Remove a person's uploaded files and DB row.
+
+    face_images and augmented_images rows cascade-delete via their FKs;
+    only the on-disk files need explicit cleanup.
+    """
+    upload_dir = Path(current_app.config["UPLOAD_FOLDER"]) / "people" / str(person_id)
+    shutil.rmtree(upload_dir, ignore_errors=True)
+    db.execute("DELETE FROM people WHERE id = ?", (person_id,))
+
+
 @bp.post("/people/<int:person_id>/delete")
 def delete_person(person_id):
     db = get_db()
@@ -428,13 +439,43 @@ def delete_person(person_id):
         flash("Person not found.")
         return redirect(url_for("main.dashboard"))
 
-    # face_images rows cascade-delete via the FK; only the on-disk files need cleanup.
-    upload_dir = Path(current_app.config["UPLOAD_FOLDER"]) / "people" / str(person_id)
-    shutil.rmtree(upload_dir, ignore_errors=True)
-
-    db.execute("DELETE FROM people WHERE id = ?", (person_id,))
+    _delete_person_record(db, person_id)
     db.commit()
     flash(f"Removed {person['name']}.")
+    return redirect(url_for("main.dashboard"))
+
+
+@bp.post("/people/bulk_delete")
+def bulk_delete_people():
+    person_ids = request.form.getlist("person_ids", type=int)
+    if not person_ids:
+        flash("No people selected.")
+        return redirect(url_for("main.dashboard"))
+
+    db = get_db()
+    placeholders = ",".join("?" * len(person_ids))
+    rows = db.execute(
+        f"SELECT id, name FROM people WHERE id IN ({placeholders})", person_ids
+    ).fetchall()
+
+    for row in rows:
+        _delete_person_record(db, row["id"])
+    db.commit()
+    flash(f"Removed {len(rows)} people.")
+    return redirect(url_for("main.dashboard"))
+
+
+@bp.post("/detections/clear")
+def clear_detections():
+    db = get_db()
+    rows = db.execute("SELECT clip_path FROM detections WHERE clip_path != ''").fetchall()
+    for row in rows:
+        (CLIPS_DIR / Path(row["clip_path"]).name).unlink(missing_ok=True)
+
+    count = db.execute("SELECT COUNT(*) FROM detections").fetchone()[0]
+    db.execute("DELETE FROM detections")
+    db.commit()
+    flash(f"Cleared {count} detection log(s).")
     return redirect(url_for("main.dashboard"))
 
 

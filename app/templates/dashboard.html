@@ -136,11 +136,13 @@
       <section class="grid">
         <article class="panel">
           <h2>People</h2>
+          <form id="bulk-delete-people-form" action="{{ url_for('main.bulk_delete_people') }}" method="post"></form>
           <table>
-            <thead><tr><th>Name</th><th>Images</th><th>Notes</th><th>Actions</th></tr></thead>
+            <thead><tr><th></th><th>Name</th><th>Images</th><th>Notes</th><th>Actions</th></tr></thead>
             <tbody>
               {% for person in people %}
                 <tr>
+                  <td><input type="checkbox" name="person_ids" value="{{ person.id }}" form="bulk-delete-people-form" style="width:auto;"></td>
                   <td><a href="{{ url_for('main.person_detail', person_id=person.id) }}">{{ person.name }}</a></td>
                   <td>{{ person.image_count }}</td>
                   <td>{{ person.notes }}</td>
@@ -153,10 +155,15 @@
                   </td>
                 </tr>
               {% else %}
-                <tr><td colspan="4">No people enrolled yet.</td></tr>
+                <tr><td colspan="5">No people enrolled yet.</td></tr>
               {% endfor %}
             </tbody>
           </table>
+          {% if people %}
+            <button type="submit" form="bulk-delete-people-form" onclick="return confirm('Remove all selected people and their enrolled images?');" style="color: white; background-color: #dc3545; margin-top: 8px;">
+              Delete selected
+            </button>
+          {% endif %}
         </article>
 
        <article class="panel">
@@ -211,7 +218,14 @@
       </section>
 
       <section class="panel">
-        <h2>Detection log</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2>Detection log</h2>
+          <form action="{{ url_for('main.clear_detections') }}" method="post" style="margin:0;">
+            <button type="submit" onclick="return confirm('Clear all detection logs? This cannot be undone.');" style="color: white; background-color: #dc3545; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+              Clear logs
+            </button>
+          </form>
+        </div>
         <table>
           <thead><tr><th>Time</th><th>Person</th><th>Camera</th><th>Confidence</th><th>Clip</th></tr></thead>
           <tbody>
