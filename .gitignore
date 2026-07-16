@@ -6,3 +6,4 @@ instance/
 .env
 /venv
 /augmentedImages
+app/static/clips/

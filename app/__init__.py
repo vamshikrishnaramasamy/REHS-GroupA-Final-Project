@@ -1,5 +1,6 @@
 import os
 
+import click
 from flask import Flask
 import os
 
@@ -39,6 +40,14 @@ def create_app():
 
     with app.app_context():
         init_db()
+
+    @app.cli.command("cleanup-clips")
+    @click.option("--days", type=float, default=None, help="Retention period override, in days (default: CLIP_RETENTION_DAYS env or 30).")
+    def cleanup_clips_command(days):
+        from .clips import cleanup_old_clips
+
+        removed = cleanup_old_clips(retention_days=days)
+        click.echo(f"Removed {removed} clip file(s) past retention.")
 
     return app
 
