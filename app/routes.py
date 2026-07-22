@@ -166,15 +166,23 @@ def cameras():
     processed_cameras = []
     online_count = 0
     offline_count = 0
+    disabled_count = 0
 
     # 2. Convert SQLite Row objects to mutable dicts, check status, and update DB
     for row in raw_cameras:
         camera_dict = dict(row)
-        
+
+        if not camera_dict["is_active"]:
+            # Disabled cameras are skipped entirely, no network ping wasted on them.
+            camera_dict["online"] = False
+            disabled_count += 1
+            processed_cameras.append(camera_dict)
+            continue
+
         # Check if the RTSP stream is currently alive
         is_online = is_camera_online(camera_dict["stream_url"])
         camera_dict["online"] = is_online
-        
+
         if is_online:
             online_count += 1
             # Update the last_frame value to the current time on page load
@@ -185,7 +193,7 @@ def cameras():
             )
         else:
             offline_count += 1
-            
+
         processed_cameras.append(camera_dict)
 
     db.commit()
@@ -194,7 +202,8 @@ def cameras():
         "camera.html",
         cameras=processed_cameras,
         online_count=online_count,
-        offline_count=offline_count
+        offline_count=offline_count,
+        disabled_count=disabled_count,
     )
 
 
@@ -220,7 +229,10 @@ def camera_status(camera_id):
     camera = db.execute("SELECT * FROM cameras WHERE id = ?", (camera_id,)).fetchone()
     if not camera:
         return jsonify({"online": False, "last_frame": "Never"}), 404
-        
+
+    if not camera["is_active"]:
+        return jsonify({"online": False, "disabled": True, "last_frame": camera["last_frame"] or "Never"})
+
     is_online = is_camera_online(camera["stream_url"])
     last_frame_time = camera["last_frame"] or "Never"
     
@@ -235,6 +247,7 @@ def camera_status(camera_id):
         
     return jsonify({
         "online": is_online,
+        "disabled": False,
         "last_frame": last_frame_time
     })
 
@@ -294,8 +307,25 @@ def delete_camera(camera_id):
     db.commit()
     
     flash(f"Removed camera: {camera_name}")
-    
+
     return redirect(url_for("main.cameras"))
+
+
+@bp.post("/cameras/<int:camera_id>/toggle")
+def toggle_camera(camera_id):
+    db = get_db()
+    camera = db.execute("SELECT name, is_active FROM cameras WHERE id = ?", (camera_id,)).fetchone()
+    if not camera:
+        flash("Camera not found.")
+        return redirect(url_for("main.cameras"))
+
+    new_state = 0 if camera["is_active"] else 1
+    db.execute("UPDATE cameras SET is_active = ? WHERE id = ?", (new_state, camera_id))
+    db.commit()
+
+    flash(f"{camera['name']} {'enabled' if new_state else 'disabled'}.")
+    return redirect(url_for("main.cameras"))
+
 
 @bp.post("/detections/mark_false_positive/<int:det_id>")
 def mark_false_positive(det_id):

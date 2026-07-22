@@ -280,6 +280,10 @@ th {
   color: #c62828;
 }
 
+.status.disabled {
+  color: var(--muted);
+}
+
 .camera-feed {
   width: 100%;
   aspect-ratio: 16 / 9;
