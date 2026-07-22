@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS detections (
     confidence REAL NOT NULL,
     snapshot_path TEXT DEFAULT '',
     clip_path TEXT DEFAULT '',
-    occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_false_positive INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS augmented_images (

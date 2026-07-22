@@ -93,15 +93,38 @@ def dashboard():
     print("="*50 + "\n")
     # ----------------------------------
     db = get_db()
+
+    # 1. Capture filter values from the URL query parameters
+    person_filter = request.args.get("person", "").strip()
+    camera_filter = request.args.get("camera", "").strip()
+    min_conf = request.args.get("min_confidence", type=float)
+
+    # 2. Build dynamic SQL query
+    query = "SELECT * FROM detections WHERE 1=1"
+    params = []
+
+    if person_filter:
+        query += " AND person_name LIKE ?"
+        params.append(f"%{person_filter}%")
+    if camera_filter:
+        query += " AND camera_name LIKE ?"
+        params.append(f"%{camera_filter}%")
+    if min_conf is not None:
+        query += " AND confidence >= ?"
+        params.append(min_conf)
+
+    query += " ORDER BY occurred_at DESC LIMIT 50"
+
+    # 3. Execute filtered query
+    detections = db.execute(query, params).fetchall()
+
+    # Stats and secondary queries
     stats = {
         "people": db.execute("SELECT COUNT(*) FROM people").fetchone()[0],
         "cameras": db.execute("SELECT COUNT(*) FROM cameras").fetchone()[0],
         "detections": db.execute("SELECT COUNT(*) FROM detections").fetchone()[0],
         "augmented_images": db.execute("SELECT COUNT(*) FROM augmented_images").fetchone()[0],
     }
-    detections = db.execute(
-        "SELECT * FROM detections ORDER BY occurred_at DESC LIMIT 20"
-    ).fetchall()
     cameras = db.execute("SELECT * FROM cameras ORDER BY name").fetchall()
     people = db.execute(
         """
@@ -120,6 +143,7 @@ def dashboard():
         ORDER BY source_filename
         """
     ).fetchall()
+
     return render_template(
         "dashboard.html",
         stats=stats,
@@ -127,6 +151,8 @@ def dashboard():
         cameras=cameras,
         people=people,
         augmented_sources=augmented_sources,
+        # Pass filters back so input fields stay populated after submitting
+        filters={"person": person_filter, "camera": camera_filter, "min_conf": min_conf},
     )
 
 
@@ -230,6 +256,14 @@ def delete_camera(camera_id):
     flash(f"Removed camera: {camera_name}")
     
     return redirect(url_for("main.cameras"))
+
+@bp.post("/detections/mark_false_positive/<int:det_id>")
+def mark_false_positive(det_id):
+    db = get_db()
+    db.execute("UPDATE detections SET is_false_positive = 1 WHERE id = ?", (det_id,))
+    db.commit()
+    flash("Detection marked as false positive.")
+    return redirect(url_for("main.dashboard", **request.args)) # Keeps filters active
 
 
 @bp.post("/people")

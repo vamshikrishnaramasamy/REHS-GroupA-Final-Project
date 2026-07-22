@@ -43,6 +43,69 @@ main {
   text-transform: uppercase;
 }
 
+.false-positive {
+    opacity: 0.5;
+    background-color: #f8f9fa;
+    text-decoration: line-through;
+}
+
+/* --- Filter Form Alignment & Sizing --- */
+.filter-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap; /* Prevents overflow on smaller screens */
+}
+
+.filter-input {
+  height: 38px;
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+
+.filter-input-sm {
+  width: 90px;
+}
+
+.btn-primary.btn-sm {
+  height: 38px;
+  padding: 0 16px;
+  white-space: nowrap; /* Forces text onto a single line */
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: none;
+  background-color: #0b6bcb;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.btn-primary.btn-sm:hover {
+  background-color: #08529c;
+}
+
+.btn-reset {
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0 8px;
+  transition: color 0.2s ease;
+}
+
+.btn-reset:hover {
+  color: #111827;
+  text-decoration: underline;
+}
+
 h1,
 h2,
 p {

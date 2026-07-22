@@ -218,37 +218,45 @@
       </section>
 
       <section class="panel">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h2>Detection log</h2>
-          <form action="{{ url_for('main.clear_detections') }}" method="post" style="margin:0;">
-            <button type="submit" onclick="return confirm('Clear all detection logs? This cannot be undone.');" style="color: white; background-color: #dc3545; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
-              Clear logs
-            </button>
-          </form>
-        </div>
-        <table>
-          <thead><tr><th>Time</th><th>Person</th><th>Camera</th><th>Confidence</th><th>Clip</th></tr></thead>
-          <tbody>
-            {% for detection in detections %}
-              <tr>
-                <td>{{ detection.occurred_at }}</td>
-                <td>{{ detection.person_name }}</td>
-                <td>{{ detection.camera_name }}</td>
-                <td>{{ "%.1f"|format(detection.confidence) }}%</td>
-                <td>
-                  {% if detection.clip_path %}
-                    <a href="{{ url_for('static', filename=detection.clip_path) }}" target="_blank">View clip</a>
-                  {% else %}
-                    &mdash;
-                  {% endif %}
-                </td>
-              </tr>
-            {% else %}
-              <tr><td colspan="5">No detections yet.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </section>
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h2>Detection Log</h2>
+    <form action="{{ url_for('main.clear_detections') }}" method="post">
+      <button type="submit" onclick="return confirm('Clear all logs?');" style="background:#dc3545; color:white; border:none; padding:4px 8px; cursor:pointer;">Clear all</button>
+    </form>
+  </div>
+
+  <!-- Filter Form -->
+<form method="get" class="filter-form">
+  <input name="person" class="filter-input" placeholder="Person name" value="{{ filters.person or '' }}">
+  <input name="camera" class="filter-input" placeholder="Camera name" value="{{ filters.camera or '' }}">
+  <input name="min_confidence" class="filter-input filter-input-sm" type="number" step="0.1" placeholder="Min %" value="{{ filters.min_conf or '' }}">
+  
+  <button type="submit" class="btn btn-primary btn-sm">Apply filters</button>
+  <a href="{{ url_for('main.dashboard') }}" class="btn-reset">Reset</a>
+</form>
+
+  <table>
+    <thead><tr><th>Snapshot</th><th>Time</th><th>Person</th><th>Camera</th><th>Conf</th><th>Review</th></tr></thead>
+    <tbody>
+      {% for d in detections %}
+      <tr class="{{ 'false-positive' if d.is_false_positive else '' }}">
+        <td>{% if d.snapshot_path %}<img src="{{ url_for('static', filename=d.snapshot_path) }}" width="50">{% endif %}</td>
+        <td>{{ d.occurred_at }}</td>
+        <td>{{ d.person_name }}</td>
+        <td>{{ d.camera_name }}</td>
+        <td>{{ "%.1f"|format(d.confidence) }}%</td>
+        <td>
+          {% if not d.is_false_positive %}
+            <form action="{{ url_for('main.mark_false_positive', det_id=d.id) }}" method="post">
+              <button type="submit" style="background:#ffc107; border:none; padding:2px 6px; cursor:pointer;">Flag FP</button>
+            </form>
+          {% else %}<em>Flagged</em>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
     </main>
   </body>
 </html>
