@@ -8,3 +8,21 @@ instance/
 /augmentedImages
 app/static/clips/
 .vscode
+
+# Xcode / iOS
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+.build/
+Pods/
+*.xcworkspace/xcuserdata/
+timeline.xctimeline
+playground.xcworkspace
