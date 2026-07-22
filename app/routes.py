@@ -13,7 +13,7 @@ from augmentation_utils import generate_variants
 from .clips import CLIPS_DIR, capture_detection_clip
 from .db import get_db
 from .notifications import send_detection_alert
-from .recognition import recognize_snapshot, save_enrollment_image
+from .recognition import record_detection, save_enrollment_image
 from datetime import datetime
 
 bp = Blueprint("main", __name__)
@@ -264,32 +264,10 @@ def detect_face():
         return jsonify({"error": f"'{image.filename}' is an invalid file type. Only PNG, JPG, JPEG, WEBP allowed."}), 400
 
     camera_name = request.form.get("camera_name", "").strip() or "iPhone TrueDepth"
-
-    upload_dir = Path(current_app.config["UPLOAD_FOLDER"]) / "detections"
     filename = f"{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{secure_filename(image.filename)}"
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    full_path = upload_dir / filename
-    image.save(full_path)
 
-    result = recognize_snapshot(str(full_path))
-    person_name = result.person_name if result else "Unknown"
-    confidence = result.confidence if result else 0.0
-
-    db = get_db()
-    db.execute(
-        """
-        INSERT INTO detections (person_name, camera_name, confidence, snapshot_path)
-        VALUES (?, ?, ?, ?)
-        """,
-        (person_name, camera_name, confidence, f"detections/{filename}"),
-    )
-    db.commit()
-
-    return jsonify({
-        "match": result is not None,
-        "person_name": person_name,
-        "confidence": confidence,
-    })
+    result = record_detection(image.read(), filename, camera_name)
+    return jsonify(result)
 
 
 # --- POST ENDPOINTS ---

@@ -9,6 +9,38 @@ from .db import get_db
 MIN_CONFIDENCE = 80.0
 
 
+def record_detection(image_bytes: bytes, filename: str, camera_name: str) -> dict:
+    """Save a captured frame, run it through recognition, and log a detection row.
+
+    Shared by /api/detect (external capture devices, e.g. the iPhone TrueDepth
+    app) and the background camera sampler, so both paths behave identically.
+    """
+    upload_dir = Path(current_app.config["UPLOAD_FOLDER"]) / "detections"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    full_path = upload_dir / filename
+    full_path.write_bytes(image_bytes)
+
+    result = recognize_snapshot(str(full_path))
+    person_name = result.person_name if result else "Unknown"
+    confidence = result.confidence if result else 0.0
+
+    db = get_db()
+    db.execute(
+        """
+        INSERT INTO detections (person_name, camera_name, confidence, snapshot_path)
+        VALUES (?, ?, ?, ?)
+        """,
+        (person_name, camera_name, confidence, f"detections/{filename}"),
+    )
+    db.commit()
+
+    return {
+        "match": result is not None,
+        "person_name": person_name,
+        "confidence": confidence,
+    }
+
+
 @dataclass(frozen=True)
 class RecognitionResult:
     person_name: str
