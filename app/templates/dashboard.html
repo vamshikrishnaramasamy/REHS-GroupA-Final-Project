@@ -240,7 +240,7 @@
     <tbody>
       {% for d in detections %}
       <tr class="{{ 'false-positive' if d.is_false_positive else '' }}">
-        <td>{% if d.snapshot_path %}<img src="{{ url_for('static', filename=d.snapshot_path) }}" width="50">{% endif %}</td>
+        <td>{% if d.snapshot_path %}<img src="{{ url_for('main.uploaded_file', filename=d.snapshot_path) }}" width="50">{% endif %}</td>
         <td>{{ d.occurred_at }}</td>
         <td>{{ d.person_name }}</td>
         <td>{{ d.camera_name }}</td>

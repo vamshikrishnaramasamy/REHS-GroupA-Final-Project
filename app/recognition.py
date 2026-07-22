@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from flask import current_app
+
+from .db import get_db
+
 
 MIN_CONFIDENCE = 80.0
 
@@ -21,10 +25,35 @@ def save_enrollment_image(upload, destination_dir: Path) -> str:
 
 
 def recognize_snapshot(snapshot_path: str) -> RecognitionResult | None:
-    """Placeholder for DeepFace.find integration.
+    """Match a captured frame against enrolled people via DeepFace.find()."""
+    from deepface import DeepFace
 
-    The app logs detections through one narrow function so the team can replace
-    this stub with DeepFace without changing the Flask routes.
-    """
-    _ = snapshot_path
-    return None
+    people_dir = Path(current_app.config["UPLOAD_FOLDER"]) / "people"
+    if not any(people_dir.rglob("*.*")):
+        return None
+
+    try:
+        matches = DeepFace.find(
+            img_path=snapshot_path,
+            db_path=str(people_dir),
+            detector_backend="mtcnn",
+            enforce_detection=False,
+            silent=True,
+        )
+    except ValueError:
+        return None
+
+    if not matches or matches[0].empty:
+        return None
+
+    best = matches[0].iloc[0]
+    confidence = float(best["confidence"])
+    if confidence < MIN_CONFIDENCE:
+        return None
+
+    person_id = Path(best["identity"]).parent.name
+    row = get_db().execute("SELECT name FROM people WHERE id = ?", (person_id,)).fetchone()
+    if row is None:
+        return None
+
+    return RecognitionResult(person_name=row["name"], confidence=confidence, snapshot_path=snapshot_path)
