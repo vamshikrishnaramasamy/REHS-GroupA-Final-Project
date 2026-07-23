@@ -34,7 +34,7 @@
 
       <section class="stats">
         <article>
-          <span>{{ cameras|length }}</span>
+          <span>{{ total_camera_count }}</span>
           <p>Total Cameras</p>
         </article>
 
@@ -55,6 +55,40 @@
       </section>
 
       <section class="camera-grid">
+
+        <!-- Built-in iPhone TrueDepth live stream. Always present - not a
+             registered camera, so it doesn't go through the DB/RTSP status
+             checks below and has no data-camera-id (excluded from polling). -->
+        <article class="panel" id="camera-panel-iphone">
+
+          <div class="camera-header">
+
+            <div>
+              <h2>iPhone TrueDepth</h2>
+
+              <p class="camera-location">
+                Built-in face-ID camera
+              </p>
+            </div>
+
+            <span class="status online">● Online</span>
+
+          </div>
+
+          <div class="camera-feed">
+            <img
+              src="{{ url_for('main.camera_grid_live') }}"
+              alt="iPhone TrueDepth live stream">
+          </div>
+
+          <div class="camera-footer">
+            <p>
+              <strong>Source:</strong>
+              Built-in (TrueDepth face-ID app)
+            </p>
+          </div>
+
+        </article>
 
         {% for camera in cameras %}
 
@@ -180,7 +214,9 @@
       });
 
       async function checkCameraStatuses() {
-        let currentOnlineCount = 0;
+        // The built-in iPhone TrueDepth card isn't in `cameras` (no data-camera-id,
+        // so it's never polled) but it's always shown and always counted as online.
+        let currentOnlineCount = 1;
         let currentOfflineCount = 0;
         let currentDisabledCount = 0;
 

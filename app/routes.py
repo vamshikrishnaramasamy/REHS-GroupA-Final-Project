@@ -2,7 +2,10 @@ import ipaddress
 import re
 import shutil
 import sqlite3
+import threading
+import time
 import cv2
+import numpy as np
 from pathlib import Path
 # Added 'jsonify' to the imports
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for, Response, jsonify, send_from_directory
@@ -20,6 +23,11 @@ bp = Blueprint("main", __name__)
 
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
 DEFAULT_ANDROID_WEBCAM_PORT = 8080
+
+# In-memory "latest frame" for the live camera grid. Intentionally not persisted
+# to disk or the database - just the most recent JPEG, overwritten on each POST.
+_latest_frame_lock = threading.Lock()
+_latest_frame: bytes | None = None
 
 
 def is_allowed_image(filename):
@@ -198,12 +206,18 @@ def cameras():
 
     db.commit()
 
+    # The iPhone TrueDepth live stream is a built-in source, not a registered
+    # camera - it's always shown on this page, so it's always counted as online.
+    online_count += 1
+    total_camera_count = len(processed_cameras) + 1
+
     return render_template(
         "camera.html",
         cameras=processed_cameras,
         online_count=online_count,
         offline_count=offline_count,
         disabled_count=disabled_count,
+        total_camera_count=total_camera_count,
     )
 
 
@@ -217,6 +231,49 @@ def video_feed(camera_id):
         
     return Response(
         gen_frames(camera["stream_url"]),
+        mimetype='multipart/x-mixed-replace; boundary=frame'
+    )
+
+
+def _placeholder_frame_bytes():
+    """A small 'no signal' JPEG, generated in memory, for when no live frame has arrived yet."""
+    img = np.zeros((240, 320, 3), dtype=np.uint8)
+    cv2.putText(img, "No live frame yet", (20, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+    _, buffer = cv2.imencode(".jpg", img)
+    return buffer.tobytes()
+
+
+def gen_live_frames():
+    """Repeatedly yields the latest in-memory frame (or a placeholder) as MJPEG."""
+    while True:
+        with _latest_frame_lock:
+            frame = _latest_frame
+        if frame is None:
+            frame = _placeholder_frame_bytes()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        time.sleep(0.1)
+
+
+@bp.post("/api/live_frame")
+def live_frame():
+    """Accepts a JPEG and stores it in memory as the latest live frame. No disk, no DB."""
+    global _latest_frame
+    image = request.files.get("image")
+    if image is None or not image.filename:
+        return jsonify({"error": "No image file provided under form field 'image'."}), 400
+
+    with _latest_frame_lock:
+        _latest_frame = image.read()
+
+    return jsonify({"status": "ok"})
+
+
+@bp.route("/camera_grid/live")
+def camera_grid_live():
+    """Serves the latest in-memory frame as a continuously updating MJPEG stream."""
+    return Response(
+        gen_live_frames(),
         mimetype='multipart/x-mixed-replace; boundary=frame'
     )
 
