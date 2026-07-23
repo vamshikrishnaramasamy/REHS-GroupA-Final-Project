@@ -8,6 +8,7 @@ instance/
 /augmentedImages
 app/static/clips/
 .vscode
+*.log
 
 # Xcode / iOS
 DerivedData/

@@ -1,3 +1,4 @@
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -7,6 +8,12 @@ from .db import get_db
 
 
 MIN_CONFIDENCE = 80.0
+
+# DeepFace.find() is CPU-heavy and not safe to run concurrently: overlapping
+# calls (e.g. the background sampler firing while a manual /api/detect
+# request is in flight) make TensorFlow's per-call thread pools fight each
+# other for cores, which can turn a ~1s lookup into a many-minute stall.
+_recognition_lock = threading.Lock()
 
 
 def record_detection(image_bytes: bytes, filename: str, camera_name: str) -> dict:
@@ -61,17 +68,27 @@ def recognize_snapshot(snapshot_path: str) -> RecognitionResult | None:
     from deepface import DeepFace
 
     people_dir = Path(current_app.config["UPLOAD_FOLDER"]) / "people"
-    if not any(people_dir.rglob("*.*")):
+    ref_images = [
+        p for p in people_dir.rglob("*.*")
+        if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")
+    ]
+    if not ref_images:
         return None
 
+    current_app.logger.info(
+        "Starting DeepFace.find for %s against %d reference image(s)",
+        snapshot_path, len(ref_images),
+    )
+
     try:
-        matches = DeepFace.find(
-            img_path=snapshot_path,
-            db_path=str(people_dir),
-            detector_backend="mtcnn",
-            enforce_detection=False,
-            silent=True,
-        )
+        with _recognition_lock:
+            matches = DeepFace.find(
+                img_path=snapshot_path,
+                db_path=str(people_dir),
+                detector_backend="mtcnn",
+                enforce_detection=False,
+                silent=True,
+            )
     except ValueError:
         return None
 
