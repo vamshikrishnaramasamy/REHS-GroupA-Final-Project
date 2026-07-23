@@ -83,6 +83,7 @@ def init_db():
     # CREATE TABLE IF NOT EXISTS doesn't retrofit columns onto a db file that
     # predates a schema change, so patch older databases up explicitly.
     _ensure_column(db, "detections", "clip_path", "TEXT DEFAULT ''")
+    _ensure_column(db, "detections", "is_false_positive", "INTEGER DEFAULT 0")
     _ensure_column(db, "cameras", "last_frame", "TEXT")
     _ensure_column(db, "cameras", "source_type", "TEXT NOT NULL DEFAULT 'manual'")
     _ensure_column(db, "augmented_images", "person_id", "INTEGER REFERENCES people(id) ON DELETE CASCADE")
